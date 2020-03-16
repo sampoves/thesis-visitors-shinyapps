@@ -4,9 +4,10 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 3.3.2020
+# 16.3.2020
 #
-# This is an interactive tool for analysing the results of my research survey.
+# This is an interactive tool for analysing the timeline of the results and
+# visitors of my research survey.
 
 # Libraries
 library(shiny)
@@ -16,11 +17,13 @@ library(dygraphs)
 library(xts) 
 library(htmltools)
 
+
+
 #### Preparation ####
 
 # Important directories
-datapath <- file.path("pythonrecords.csv")
-visitorpath <- file.path("visitors.csv")
+datapath <- "pythonrecords.csv"
+visitorpath <- "visitors.csv"
 
 # Read in csv data. Define column types
 thesisdata <- read.csv(file = datapath,
@@ -95,6 +98,8 @@ visitor_xts <- xts(x = visitordata$X, order.by = visitordata$ts_first)
 records_xts <- xts(x = thesisdata_for_xts$X, 
                    order.by = thesisdata_for_xts$timestamp)
 
+
+
 #### Dygraph event timestamps #### 
 # These are manually collected from my email correspondence and Facebook history. 
 # If many areas are in the same variable, the earliest timestamp is selected
@@ -106,7 +111,7 @@ twitter <- as.POSIXct("2019-05-07 10:43:00 EEST")
 mao <- as.POSIXct("2019-05-09 13:24:00 EEST") 
 
 # Student email list: Vasara, Resonanssi, Matrix, Geysir, Synop, Meridiaani, 
-# Tyyppi-arvo, HYK, TKO-ÄLY, Symbioosi, Helix, MYY, Sampsa, MYO, Lipidi,
+# Tyyppi-arvo, HYK, TKO-äLY, Symbioosi, Helix, MYY, Sampsa, MYO, Lipidi,
 # Vuorovaikeutus, YFK, Oikos
 emails <- as.POSIXct("2019-05-14 10:58:00 EEST") 
 
@@ -136,7 +141,7 @@ helsinki1 <- as.POSIXct("2019-05-24 16:28:00 EEST")
 helsinki2 <- as.POSIXct("2019-05-25 14:56:00 EEST") 
 
 # Östersundom, Aurinkolahti, Vuosaari, Kruunuvuorenranta, Kontula, Mellunmäki/
-# Mellunkylä, Pitäjänmäki, Munkkiniemi, ITÄ-HELSINKI, Itäkeskus-itästadilaista
+# Mellunkylä, Pitäjänmäki, Munkkiniemi, ITä-HELSINKI, Itäkeskus-itästadilaista
 # laiffii, Marjaniemi Helsinki, Puotila & Vartsika, Vartiokylä/Vartioharju,
 # Tammisalo, Herttoniemenranta, Roihuvuori, Kulosaari-HYGGE-Brandö, Suutarilassa
 # tapahtuu, Tapaninvainion foorumi, Tapanila-Mosabacka, Paloheinä-Pakila-
@@ -160,7 +165,7 @@ peri <- as.POSIXct("2019-06-09 11:01:00 EEST")
 
 # Reminders to the largest Facebook groups: Vantaa Puskaradio, Sipoo-Sibbo, 
 # Järvenpää, WE <3 KERAVA, Tuusula, Nurmijärven  viidakkorumpu, Vihtiläiset, 
-# Korso, Käpylä Helsinki, Laajasalo, Vuosaari, ITÄ-HELSINKI, Lauttasaari, 
+# Korso, Käpylä Helsinki, Laajasalo, Vuosaari, ITä-HELSINKI, Lauttasaari, 
 # Haagan ilmoitustaulu
 reminder <- as.POSIXct("2019-06-26 15:33:00 EEST") 
 
@@ -182,7 +187,7 @@ visitor_server <- function(input, output) {
   
   output$dygraph <- renderUI({
     visitor_graph <- list(
-      dygraph(records_xts, main = "records", group = "thesis") %>%
+      dygraph(records_xts, main = "Received records", group = "thesis") %>%
         dyOptions(drawPoints = TRUE, pointSize = 2) %>%
         dyRangeSelector(height = 70)  %>%
         
@@ -204,7 +209,7 @@ visitor_server <- function(input, output) {
         dyEvent(lisaakaupunkia2, "Reminder, Lisää kaupunkia Helsinkiin", labelLoc = "bottom") %>%
         dyEvent(misc3, "Email list reminders, GIS-velhot FB group", labelLoc = "bottom"),
       
-      dygraph(visitor_xts, main = "visitors", group = "thesis") %>%
+      dygraph(visitor_xts, main = "Unique first visits", group = "thesis") %>%
         dyOptions(drawPoints = TRUE, pointSize = 2) %>%
         dyRangeSelector(height = 70)  %>%
         
@@ -231,18 +236,38 @@ visitor_server <- function(input, output) {
 }
 
 visitor_ui <- basicPage(
+  
+  # CSS tricks. Most importantly create white background box for the dygraph
+  # and center it. In centering parent and child element are essential and
+  # their text-align: center; and display: inline-block; parameters.
   tags$head(
     tags$style(HTML("
       html, body {
         width: 100%;
         text-align: center;
+        background-color: #272b30;
       }
-      #dygraph {
+      h2, p {
+        color: #c8c8c8;
+      }
+      .contentsp {
+        text-align: center;
+      }
+      .contentsc {
+        border: 5px solid #2e3338;
+        border-radius: 10px;
+        padding: 12px;
+        margin-top: 15px;
+        background: white;
         display: inline-block;
       }"
     ))
   ),
-  titlePanel("Received responses and survey page first visits"),
-  uiOutput("dygraph")
+  
+  titlePanel("Sampo Vesanen MSc thesis research survey: received responses and survey page first visits"),
+  p("Click and hold, then drag and release to zoom to a period of time. Double click to return to the full view."),
+  HTML("<div class='contentsp'><div class='contentsc'>"),
+  uiOutput("dygraph"),
+  HTML("</div></div>")
 )
 shinyApp(visitor_ui, visitor_server)
