@@ -4,7 +4,7 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 16.3.2020
+# 3.5.2020
 #
 # This is an interactive tool for analysing the timeline of the results and
 # visitors of my research survey.
@@ -27,12 +27,14 @@ visitorpath <- "visitors.csv"
 
 # Read in csv data. Define column types
 thesisdata <- read.csv(file = datapath,
-                colClasses = c(timestamp = "POSIXct", zipcode = "character", 
-                               ip = "character", timeofday = "factor", 
-                               parkspot = "factor", likert = "factor", 
-                               ua_forest = "factor", ykr_zone = "factor", 
-                               subdiv = "factor"),
-                header = TRUE, sep = ",")
+                       header = TRUE, 
+                       sep = ",",
+                       colClasses = c(timestamp = "POSIXct", zipcode = "character", 
+                                      ip = "character", timeofday = "factor", 
+                                      parkspot = "factor", likert = "factor", 
+                                      ua_forest = "factor", ykr_zone = "factor", 
+                                      subdiv = "factor"),
+                       stringsAsFactors = TRUE)
 
 # Name factor levels. Determine order of factor levels for plotting
 levels(thesisdata$parkspot) <- list("On the side of street" = 1,
@@ -77,10 +79,12 @@ thesisdata <- subset(thesisdata, select = -c(index))
 # Use this ShinyApp to explore the development in amounts of survey respondents.
 
 visitordata <- read.csv(file = visitorpath,
-                       colClasses = c(X = "integer", id = "integer", 
-                                      ip = "factor", ts_first = "POSIXct", 
-                                      ts_latest = "POSIXct", count = "integer"),
-                       header = TRUE, sep = ",")
+                        header = TRUE, 
+                        sep = ",",
+                        colClasses = c(X = "integer", id = "integer", 
+                                       ip = "factor", ts_first = "POSIXct", 
+                                       ts_latest = "POSIXct", count = "integer"),
+                        stringsAsFactors = TRUE)
 
 # The survey visitors table saved visitor timestamps as NOW() and that is UTC in 
 # MySQL. Change POSIXct object timezone to UTC+3, Helsinki summer time
@@ -266,6 +270,8 @@ visitor_ui <- basicPage(
   
   titlePanel("Sampo Vesanen MSc thesis research survey: received responses and survey page first visits"),
   p("Click and hold, then drag and release to zoom to a period of time. Double click to return to the full view."),
+  HTML("<p style='font-size: 11px; color: grey; margin-top: -10px;'>",
+       "Analysis app version 3.5.2020</p>"),
   HTML("<div class='contentsp'><div class='contentsc'>"),
   uiOutput("dygraph"),
   HTML("</div></div>")
