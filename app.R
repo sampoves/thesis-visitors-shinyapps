@@ -4,35 +4,45 @@
 
 # "Parking of private cars and spatial accessibility in Helsinki Capital Region"
 # by Sampo Vesanen
-# 3.5.2020
+# 13.10.2020
 #
 # This is an interactive tool for analysing the timeline of the results and
 # visitors of my research survey.
 
+
 # Libraries
 library(shiny)
+library(shinyjs)
 library(tidyr)
 library(dplyr)
 library(dygraphs)
-library(xts) 
+library(xts)
 library(htmltools)
 
+# App version
+app_v <- "13.10.2020"
 
 
 #### Preparation ####
 
 # Important directories
-datapath <- "pythonrecords.csv"
-visitorpath <- "visitors.csv"
+datapath <- "appdata/records_for_r.csv"
+visitorpath <- "appdata/visitors_for_r.csv"
 
 # Read in csv data. Define column types
 thesisdata <- read.csv(file = datapath,
                        header = TRUE, 
                        sep = ",",
-                       colClasses = c(timestamp = "POSIXct", zipcode = "character", 
-                                      ip = "character", timeofday = "factor", 
-                                      parkspot = "factor", likert = "factor", 
-                                      ua_forest = "factor", ykr_zone = "factor", 
+                       colClasses = c(timestamp = "POSIXct", 
+                                      zipcode = "character", 
+                                      ip = "character", 
+                                      timeofday = "factor", 
+                                      parkspot = "factor", 
+                                      likert = "factor", 
+                                      artificial_vals = "numeric",
+                                      artificial = "factor", 
+                                      ykr_zone_vals = "numeric",
+                                      ykr_zone = "factor", 
                                       subdiv = "factor"),
                        stringsAsFactors = TRUE)
 
@@ -55,22 +65,19 @@ levels(thesisdata$timeofday) <- list("Weekday, rush hour" = 1,
                                      "Can't specify, no usual time" = 4)
 
 # SYKE does not provide official translations for these zones
-levels(thesisdata$ykr_zone) <- list("keskustan jalankulkuvyöhyke" = 1,
-                                    "keskustan reunavyöhyke" = 2,
-                                    "alakeskuksen jalankulkuvyöhyke" = 3,
-                                    "intensiivinen joukkoliikennevyöhyke" = 4,
-                                    "joukkoliikennevyöhyke" = 5,
-                                    "autovyöhyke" = 6,
+levels(thesisdata$ykr_zone) <- list("keskustan jalankulkuvyohyke" = 1,
+                                    "keskustan reunavyohyke" = 2,
+                                    "alakeskuksen jalankulkuvyohyke" = 3,
+                                    "intensiivinen joukkoliikennevyohyke" = 4,
+                                    "joukkoliikennevyohyke" = 5,
+                                    "autovyohyke" = 6,
                                     "novalue" = 7)
 
-levels(thesisdata$ua_forest) <- list("Predominantly forest" = 1,
-                                     "Mostly forest" = 2,
-                                     "Moderate forest" = 3,
-                                     "Some forest" = 4,
-                                     "Scarce forest" = 5)
-
-# Remove column "index". Remove X, pinta_ala
-thesisdata <- subset(thesisdata, select = -c(index))
+levels(thesisdata$artificial) <- list("Fully built" = 1,
+                                      "Predominantly built" = 2,
+                                      "Moderately built" = 3,
+                                      "Some built" = 4,
+                                      "Scarcely built" = 5)
 
 
 
@@ -115,70 +122,70 @@ twitter <- as.POSIXct("2019-05-07 10:43:00 EEST")
 mao <- as.POSIXct("2019-05-09 13:24:00 EEST") 
 
 # Student email list: Vasara, Resonanssi, Matrix, Geysir, Synop, Meridiaani, 
-# Tyyppi-arvo, HYK, TKO-äLY, Symbioosi, Helix, MYY, Sampsa, MYO, Lipidi,
+# Tyyppi-arvo, HYK, TKO-ALY, Symbioosi, Helix, MYY, Sampsa, MYO, Lipidi,
 # Vuorovaikeutus, YFK, Oikos
 emails <- as.POSIXct("2019-05-14 10:58:00 EEST") 
 
-# Lisää kaupunkia Helsinkiin group and own Facebook wall. Also six private
+# Lisaa kaupunkia Helsinkiin group and own Facebook wall. Also six private
 # WhatsApp groups
 fb <- as.POSIXct("2019-05-15 10:33:00 EEST") 
 
 # Facebook neighborhood group advertisement begins:
-# Haukilahti/Westend asukkaat, Pohjois-Espoon asukasfoorumi, Lippajärvi, 
-# Matinkylä/Olari, Leppävaara, Soukka-Sökö, Suur-Espoonlahti, Puskaradio Tapiola,
-# Puskaradio Kauniainen/Grankulla, Enemmän Tapiolaa!, Kivenlahden ystävät
+# Haukilahti/Westend asukkaat, Pohjois-Espoon asukasfoorumi, Lippajarvi, 
+# Matinkyla/Olari, Leppavaara, Soukka-Soko, Suur-Espoonlahti, Puskaradio Tapiola,
+# Puskaradio Kauniainen/Grankulla, Enemman Tapiolaa!, Kivenlahden ystavat
 espoo1 <- as.POSIXct("2019-05-22 18:00:00 EEST") 
 
-# Kalasatama-Fiskehamnen, Sörnäinen, Punavuori, Laajasalo, Herttoniemi, 
+# Kalasatama-Fiskehamnen, Sornainen, Punavuori, Laajasalo, Herttoniemi, 
 # Mankkaan lapsiperheet, 
 misc1 <- as.POSIXct("2019-05-23 21:11:00 EEST") 
 
-# Oulunkylä kierrättää ja keskustelee, Käpylä Helsinki, Kumpula, Arabian alue,
-# Vallilan ja Hermannin alue, Hermanni-liike, Jätkäsaari-liike, Ruoholahti asuu,
-# Pasila Böle, Pasila-liike, Ruskeasuo, Meilahden kylä, Töölö-liike, Töölö-
+# Oulunkyla kierrattaa ja keskustelee, Kapyla Helsinki, Kumpula, Arabian alue,
+# Vallilan ja Hermannin alue, Hermanni-liike, Jatkasaari-liike, Ruoholahti asuu,
+# Pasila Bole, Pasila-liike, Ruskeasuo, Meilahden kyla, Toolo-liike, Toolo-
 # Seura ry
 helsinki1 <- as.POSIXct("2019-05-24 16:28:00 EEST") 
 
-# Pihlajamäki, Malmi, Pukinmäen foorumi, Viikki ja Latokartano ympäristöineen,
-# Kuninkaantammi, Maununneva-Hakuninmaa, Kannelmäki-liike, Lauttasaari, 
-# Munkkivuori, Niemenmäki, Etelä-Haaga, Haagan ilmoitustaulu
+# Pihlajamaki, Malmi, Pukinmaen foorumi, Viikki ja Latokartano ymparistoineen,
+# Kuninkaantammi, Maununneva-Hakuninmaa, Kannelmaki-liike, Lauttasaari, 
+# Munkkivuori, Niemenmaki, Etela-Haaga, Haagan ilmoitustaulu
 helsinki2 <- as.POSIXct("2019-05-25 14:56:00 EEST") 
 
-# Östersundom, Aurinkolahti, Vuosaari, Kruunuvuorenranta, Kontula, Mellunmäki/
-# Mellunkylä, Pitäjänmäki, Munkkiniemi, ITä-HELSINKI, Itäkeskus-itästadilaista
-# laiffii, Marjaniemi Helsinki, Puotila & Vartsika, Vartiokylä/Vartioharju,
-# Tammisalo, Herttoniemenranta, Roihuvuori, Kulosaari-HYGGE-Brandö, Suutarilassa
-# tapahtuu, Tapaninvainion foorumi, Tapanila-Mosabacka, Paloheinä-Pakila-
-# Torpparinmäki ilmoittaa (se aito ja alkuperäinen)
+# Ostersundom, Aurinkolahti, Vuosaari, Kruunuvuorenranta, Kontula, Mellunmaki/
+# Mellunkyla, Pitajanmaki, Munkkiniemi, ITA-HELSINKI, Itakeskus-itastadilaista
+# laiffii, Marjaniemi Helsinki, Puotila & Vartsika, Vartiokyla/Vartioharju,
+# Tammisalo, Herttoniemenranta, Roihuvuori, Kulosaari-HYGGE-Brando, Suutarilassa
+# tapahtuu, Tapaninvainion foorumi, Tapanila-Mosabacka, Paloheina-Pakila-
+# Torpparinmaki ilmoittaa (se aito ja alkuperainen)
 helsinki3 <- as.POSIXct("2019-05-26 12:55:00 EEST") 
 
-# Pitäjänmäkeläiset, Landbo, Kamppi-Punavuori-Hietalahti
+# Pitajanmakelaiset, Landbo, Kamppi-Punavuori-Hietalahti
 helsinki4 <- as.POSIXct("2019-05-29 16:49:00 EEST") 
 
-# Perusmäki Espoo, As Oy Helsingin Arabianrinne, Rajakylä Vantaa, Leppäkorpi
-# Vantaa, Korso, Rekola, Tikkurila, Aviapolis-asukkaiden alue, Kivistö,
-# Kivistön suuralue, ASKISTO, Vantaanlaakson lapsiperheet, Vapaala, Pähkinärinne,
-# Alppikylä, Laajalahti-ryhmä (suljettu), Kilo Espoo, Karakallio, Saunalahti
-# tapahtumat ja palvelut, Nöykkiö Espoo Foorumi, Henttaalaiset, Myyrmäki
+# Perusmaki Espoo, As Oy Helsingin Arabianrinne, Rajakyla Vantaa, Leppakorpi
+# Vantaa, Korso, Rekola, Tikkurila, Aviapolis-asukkaiden alue, Kivisto,
+# Kiviston suuralue, ASKISTO, Vantaanlaakson lapsiperheet, Vapaala, Pahkinarinne,
+# Alppikyla, Laajalahti-ryhma (suljettu), Kilo Espoo, Karakallio, Saunalahti
+# tapahtumat ja palvelut, Noykkio Espoo Foorumi, Henttaalaiset, Myyrmaki
 misc2 <- as.POSIXct("2019-06-06 20:57:00 EEST") 
 
-# Pohjois-Kirkkonummelaiset, Puskaradio Sipoo, Sibbo-Sipoo, Järvenpää, We <3
-# Kerava, Lisää kaupunkia Hyrylään, Tuusula, Nurmijärvi, Nurmijärven
-# viidakkorumpu, Vihtiläiset, Vihdin Nummela, Kirkkonummelaiset (sana vapaa)
+# Pohjois-Kirkkonummelaiset, Puskaradio Sipoo, Sibbo-Sipoo, Jarvenpaa, We <3
+# Kerava, Lisaa kaupunkia Hyrylaan, Tuusula, Nurmijarvi, Nurmijarven
+# viidakkorumpu, Vihtilaiset, Vihdin Nummela, Kirkkonummelaiset (sana vapaa)
 peri <- as.POSIXct("2019-06-09 11:01:00 EEST") 
 
 # Reminders to the largest Facebook groups: Vantaa Puskaradio, Sipoo-Sibbo, 
-# Järvenpää, WE <3 KERAVA, Tuusula, Nurmijärven  viidakkorumpu, Vihtiläiset, 
-# Korso, Käpylä Helsinki, Laajasalo, Vuosaari, ITä-HELSINKI, Lauttasaari, 
+# Jarvenpaa, WE <3 KERAVA, Tuusula, Nurmijarven  viidakkorumpu, Vihtilaiset, 
+# Korso, Kapyla Helsinki, Laajasalo, Vuosaari, ITA-HELSINKI, Lauttasaari, 
 # Haagan ilmoitustaulu
 reminder <- as.POSIXct("2019-06-26 15:33:00 EEST") 
 
-# They only accepted to display my message in Nikinmäki and Puskaradio Espoo at
+# They only accepted to display my message in Nikinmaki and Puskaradio Espoo at
 # this late date
 nikinmaki <- as.POSIXct("2019-06-27 14:26:00 EEST")
 puskaradioespoo <- as.POSIXct("2019-06-27 21:30:00 EEST")
 
-# A reminder to Lisää kaupunkia Helsinkiin
+# A reminder to Lisaa kaupunkia Helsinkiin
 lisaakaupunkia2 <- as.POSIXct("2019-07-02 12:06:00 EEST")
 
 # A reminder for email lists, all except MaO. A new ad to GIS-velhot FB group
@@ -186,19 +193,41 @@ misc3 <- as.POSIXct("2019-07-05 10:29:00 EEST")
 
 
 
-# App
+# Shiny application
 visitor_server <- function(input, output) {
+  
+  # Get the window width using JavaScript, then send to Shiny server
+  shinyjs::runjs("setInterval(function() {
+                    var wid = window.innerWidth;
+                    Shiny.onInputChange('windowsize_h', wid);
+                  }, 0);")
+
+  # Reactively set the dygraph width
+  thisWidth <- shiny::reactive({
+    
+    # Make 100 % plot width actually 95 %, prevent overflow
+    if(input$width == 100) {
+      result <- input$windowsize_h * 0.95
+    } else {
+      result <- input$windowsize_h * (input$width / 100)
+    }
+    result
+  })
   
   output$dygraph <- renderUI({
     visitor_graph <- list(
-      dygraph(records_xts, main = "Received records", group = "thesis") %>%
-        dyOptions(drawPoints = TRUE, pointSize = 2) %>%
-        dyRangeSelector(height = 70)  %>%
+      dygraph(records_xts, 
+              main = "Received records", 
+              group = "thesis",
+              width = thisWidth()) %>%
+        dyOptions(drawPoints = TRUE, 
+                  pointSize = 2) %>%
+        dyRangeSelector(height = 70) %>%
         
         dyEvent(twitter, "@Digigeolab, @AccessibilityRG", labelLoc = "bottom") %>%
         dyEvent(mao, "MaO email list") %>%
         dyEvent(emails, "Kumpula and Viikki student email lists") %>%
-        dyEvent(fb, "Lisää kaupunkia Helsinkiin, own Facebook wall and 6 WhatsApp groups") %>%
+        dyEvent(fb, "Lisaa kaupunkia Helsinkiin, own Facebook wall and 6 WhatsApp groups") %>%
         dyEvent(espoo1, "Espoo, 11 groups") %>%
         dyEvent(misc1, "Espoo, Mankkaan lapsiperheet; Helsinki, 5 groups") %>%
         dyEvent(helsinki1, "Helsinki, 14 groups", labelLoc = "bottom") %>%
@@ -208,19 +237,23 @@ visitor_server <- function(input, output) {
         dyEvent(misc2, "Espoo, 7 groups; Vantaa, 13 groups; Helsinki, 2 groups", labelLoc = "bottom") %>%
         dyEvent(peri, "Surrounding municipalities, 12 groups", labelLoc = "bottom") %>%
         dyEvent(reminder, "Reminders, largest communities, 14 groups", labelLoc = "bottom") %>%
-        dyEvent(nikinmaki, "Vantaa, Nikinmäki", labelLoc = "bottom") %>%
+        dyEvent(nikinmaki, "Vantaa, Nikinmaki", labelLoc = "bottom") %>%
         dyEvent(puskaradioespoo, "Espoo, Puskaradio Espoo", labelLoc = "bottom") %>%
-        dyEvent(lisaakaupunkia2, "Reminder, Lisää kaupunkia Helsinkiin", labelLoc = "bottom") %>%
+        dyEvent(lisaakaupunkia2, "Reminder, Lisaa kaupunkia Helsinkiin", labelLoc = "bottom") %>%
         dyEvent(misc3, "Email list reminders, GIS-velhot FB group", labelLoc = "bottom"),
       
-      dygraph(visitor_xts, main = "Unique first visits", group = "thesis") %>%
-        dyOptions(drawPoints = TRUE, pointSize = 2) %>%
-        dyRangeSelector(height = 70)  %>%
+      dygraph(visitor_xts, 
+              main = "Unique first visits", 
+              group = "thesis",
+              width = thisWidth()) %>%
+        dyOptions(drawPoints = TRUE, 
+                  pointSize = 2) %>%
+        dyRangeSelector(height = 70) %>%
         
         dyEvent(twitter, "@Digigeolab, @AccessibilityRG", labelLoc = "bottom") %>%
         dyEvent(mao, "MaO email list") %>%
         dyEvent(emails, "Kumpula and Viikki student email lists") %>%
-        dyEvent(fb, "Lisää kaupunkia Helsinkiin, own Facebook wall and 6 WhatsApp groups") %>%
+        dyEvent(fb, "Lisaa kaupunkia Helsinkiin, own Facebook wall and 6 WhatsApp groups") %>%
         dyEvent(espoo1, "Espoo, 11 groups") %>%
         dyEvent(misc1, "Espoo, Mankkaan lapsiperheet; Helsinki, 5 groups") %>%
         dyEvent(helsinki1, "Helsinki, 14 groups", labelLoc = "bottom") %>%
@@ -230,19 +263,20 @@ visitor_server <- function(input, output) {
         dyEvent(misc2, "Espoo, 7 groups; Vantaa, 13 groups; Helsinki, 2 groups", labelLoc = "bottom") %>%
         dyEvent(peri, "Surrounding municipalities, 12 groups", labelLoc = "bottom") %>%
         dyEvent(reminder, "Reminders, largest communities, 14 groups", labelLoc = "bottom") %>%
-        dyEvent(nikinmaki, "Vantaa, Nikinmäki", labelLoc = "bottom") %>%
+        dyEvent(nikinmaki, "Vantaa, Nikinmaki", labelLoc = "bottom") %>%
         dyEvent(puskaradioespoo, "Espoo, Puskaradio Espoo", labelLoc = "bottom") %>%
-        dyEvent(lisaakaupunkia2, "Reminder, Lisää kaupunkia Helsinkiin", labelLoc = "bottom") %>%
+        dyEvent(lisaakaupunkia2, "Reminder, Lisaa kaupunkia Helsinkiin", labelLoc = "bottom") %>%
         dyEvent(misc3, "Email list reminders, GIS-velhot FB group", labelLoc = "bottom"))
     
     browsable(tagList(visitor_graph))
   })
 }
 
-visitor_ui <- basicPage(
+visitor_ui <- fillPage(
+  shinyjs::useShinyjs(),
   
   # CSS tricks. Most importantly create white background box for the dygraph
-  # and center it. In centering parent and child element are essential and
+  # and center it. In centering, parent and child element are essential and
   # their text-align: center; and display: inline-block; parameters.
   tags$head(
     tags$style(HTML("
@@ -250,12 +284,17 @@ visitor_ui <- basicPage(
         width: 100%;
         text-align: center;
         background-color: #272b30;
+      	height: 100%;
+        scroll-behavior: smooth;
+        overflow: auto;
+        overscroll-behavior: contain; /*disable pull-down-to-refresh on Chrome*/
       }
       h2, p {
         color: #c8c8c8;
       }
       .contentsp {
         text-align: center;
+        display: inline-block;
       }
       .contentsc {
         border: 5px solid #2e3338;
@@ -263,17 +302,41 @@ visitor_ui <- basicPage(
         padding: 12px;
         margin-top: 15px;
         background: white;
+        text-align: center;
+      }
+      .shiny-input-container {
+        margin: auto;
+      }
+      #version-info {
+        font-size: 11px;
+        color: grey;
+        margin-top: 5px;
+      }
+      #dygraph {
         display: inline-block;
       }"
     ))
   ),
   
-  titlePanel("Sampo Vesanen MSc thesis research survey: received responses and survey page first visits"),
-  p("Click and hold, then drag and release to zoom to a period of time. Double click to return to the full view."),
-  HTML("<p style='font-size: 11px; color: grey; margin-top: -10px;'>",
-       "Analysis app version 3.5.2020</p>"),
-  HTML("<div class='contentsp'><div class='contentsc'>"),
+  titlePanel("Sampo Vesanen MSc thesis research survey: received responses",
+             "and survey page first visits"),
+  p("Click and hold, then drag and release to zoom to a period of time. Double",
+    "click to return to the full view."),
+  HTML("<div class='contentsp'>",
+       "<div class='contentsc'>"),
+  
+  sliderInput(
+    inputId = "width",
+    label = HTML("plot width (% of screen)"),
+    min = 25,
+    max = 100,
+    value = 75,
+    step = 25),
+
   uiOutput("dygraph"),
-  HTML("</div></div>")
+  HTML("</div>",
+       "</div>"),
+  HTML(paste("<p id='version-info'>Visitors analysis application version", 
+             app_v, "</p>"))
 )
 shinyApp(visitor_ui, visitor_server)
