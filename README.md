@@ -1,4 +1,4 @@
-# thesis-visitors-shinyapps
+# Research survey visitors analysis application, shinyapps.io deployment
 
 ## About
 
