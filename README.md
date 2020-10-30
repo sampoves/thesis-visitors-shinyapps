@@ -8,7 +8,7 @@ This is the shinyapps.io deployment of the thesis research survey analysis appli
 
 View the Master's thesis data analysis workflow in this repository: https://github.com/sampoves/thesis-data-analysis
 
-The Master's thesis is available as PDF at the University of Helsinki E-thesis library: https://ethesis.helsinki.fi/en/ **(NB: the thesis not yet published)**
+The thesis is available as PDF at the Digital Repository of the University of Helsinki: **http://urn.fi/URN:NBN:fi:hulib-202010304366**
 
 ## Application features
 
